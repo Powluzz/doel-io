@@ -38,6 +38,7 @@ export default function AuthPage({ onAuth }: AuthPageProps) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm">
+        {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary mb-4">
             <svg viewBox="0 0 32 32" fill="none" className="w-8 h-8" aria-label="Doel.ai logo">
@@ -122,10 +123,6 @@ export default function AuthPage({ onAuth }: AuthPageProps) {
             </p>
           </CardContent>
         </Card>
-
-        <p className="text-center text-xs text-muted-foreground mt-4">
-          Demo-account: <strong>demo@doel.ai</strong> / <strong>demo123</strong>
-        </p>
       </div>
     </div>
   );
