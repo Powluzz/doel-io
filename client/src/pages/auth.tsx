@@ -42,13 +42,13 @@ export default function AuthPage({ onAuth, initialMode = "login" }: AuthPageProp
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary mb-4">
-            <svg viewBox="0 0 32 32" fill="none" className="w-8 h-8" aria-label="Doel.ai logo">
+            <svg viewBox="0 0 32 32" fill="none" className="w-8 h-8" aria-label="doel.io logo">
               <circle cx="16" cy="16" r="12" stroke="white" strokeWidth="2.5" fill="none" />
               <circle cx="16" cy="16" r="5" fill="white" />
               <path d="M16 4 L16 8M16 24 L16 28M4 16 L8 16M24 16 L28 16" stroke="white" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Doel.ai</h1>
+          <h1 className="text-2xl font-bold text-foreground">doel.io</h1>
           <p className="text-muted-foreground text-sm mt-1">Werk stap voor stap aan je doelen</p>
         </div>
 
@@ -128,3 +128,4 @@ export default function AuthPage({ onAuth, initialMode = "login" }: AuthPageProp
     </div>
   );
 }
+

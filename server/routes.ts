@@ -8,7 +8,7 @@ import * as crypto from "crypto";
 const sessions: Map<string, string> = new Map(); // token -> userId
 
 function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(password + "doel-ai-salt").digest("hex");
+  return crypto.createHash("sha256").update(password + "doel-io-salt").digest("hex");
 }
 
 function generateToken(): string {
@@ -308,3 +308,4 @@ export async function registerRoutes(httpServer: Server, app: Express) {
     res.json(pref);
   });
 }
+

@@ -26,9 +26,9 @@ function hashPass(p: string) {
 
 // Seed demo data
 function seedDemo() {
-  if (usersDb.some(u => u.email === "demo@doel.ai")) return;
+  if (usersDb.some(u => u.email === "demo@doel.io")) return;
   const demoId = genId();
-  usersDb.push({ id: demoId, email: "demo@doel.ai", passwordHash: hashPass("demo123"), name: "Demo Gebruiker" });
+  usersDb.push({ id: demoId, email: "demo@doel.io", passwordHash: hashPass("demo123"), name: "Demo Gebruiker" });
 
   const goalId = genId();
   goalsDb.push({
@@ -223,3 +223,4 @@ export function updateNotifPref(id: string, active: boolean) {
   const p = notifsDb.find(p => p.id === id && p.userId === currentUser?.id);
   if (p) p.active = active;
 }
+

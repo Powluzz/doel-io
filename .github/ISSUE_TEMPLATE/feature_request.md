@@ -1,6 +1,6 @@
 ---
 name: ✨ Feature Request
-about: Nieuwe functionaliteit voor Doel.AI
+about: Nieuwe functionaliteit voor doel.io
 title: '[FEATURE] '
 labels: feature
 assignees: Powluzz
@@ -28,3 +28,4 @@ Welk onderdeel van het G-schema raakt dit? (Gebeurtenis / Gedachten / Gevoelens 
 
 ## Extra context / ontwerp-input
 <!-- Schermschetsen, voorbeelden, referenties -->
+

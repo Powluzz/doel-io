@@ -7,7 +7,7 @@ export default function LandingPage() {
       {/* Navbar */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <span className="text-lg font-bold text-foreground">Doel.AI</span>
+          <span className="text-lg font-bold text-foreground">doel.io</span>
           <div className="flex items-center gap-3">
             <Link href="/login">
               <Button variant="ghost" size="sm">
@@ -32,7 +32,7 @@ export default function LandingPage() {
               Breng je gedragspatronen in kaart met één eenvoudig G-schema
             </h1>
             <p className="text-lg text-muted-foreground">
-              Doel.AI helpt je om gedachten, gevoelens en gedrag helder te
+              doel.io helpt je om gedachten, gevoelens en gedrag helder te
               krijgen, zodat je gerichter keuzes kunt maken in werk, relaties en
               persoonlijke groei.
             </p>
@@ -127,7 +127,7 @@ export default function LandingPage() {
             ))}
           </div>
           <p className="text-center text-sm text-muted-foreground max-w-2xl mx-auto">
-            Doel.AI maakt het G-schema laagdrempelig, zodat je het niet alleen
+            doel.io maakt het G-schema laagdrempelig, zodat je het niet alleen
             in therapie, maar ook zelfstandig kunt gebruiken voor persoonlijke
             groei.
           </p>
@@ -147,11 +147,11 @@ export default function LandingPage() {
             },
             {
               step: "Stap 2 – Beantwoord enkele vragen",
-              body: "Doel.AI leidt je stap voor stap langs gebeurtenis, gedachten, gevoelens, gedrag en gevolgen, in duidelijke taal en zonder therapiejargon.",
+              body: "doel.io leidt je stap voor stap langs gebeurtenis, gedachten, gevoelens, gedrag en gevolgen, in duidelijke taal en zonder therapiejargon.",
             },
             {
               step: "Stap 3 – Maak een klein actieplan",
-              body: "Aan het eind helpt Doel.AI je om 1–2 concrete acties te kiezen, zodat je bij een volgende situatie anders kunt reageren.",
+              body: "Aan het eind helpt doel.io je om 1–2 concrete acties te kiezen, zodat je bij een volgende situatie anders kunt reageren.",
             },
           ].map((s, i) => (
             <div key={s.step} className="space-y-3">
@@ -195,3 +195,4 @@ export default function LandingPage() {
     </div>
   );
 }
+

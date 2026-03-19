@@ -65,11 +65,11 @@ app.use((req, res, next) => {
   // Seed demo user
   const { storage } = await import("./storage");
   const crypto = await import("crypto");
-  const existing = await storage.getUserByEmail("demo@doel.ai");
+  const existing = await storage.getUserByEmail("demo@doel.io");
   if (!existing) {
     const demo = await storage.createUser({
-      email: "demo@doel.ai",
-      passwordHash: crypto.createHash("sha256").update("demo123doel-ai-salt").digest("hex"),
+      email: "demo@doel.io",
+      passwordHash: crypto.createHash("sha256").update("demo123doel-io-salt").digest("hex"),
       name: "Demo Gebruiker",
     });
     const goal = await storage.createGoal({
@@ -139,3 +139,4 @@ app.use((req, res, next) => {
     },
   );
 })();
+
