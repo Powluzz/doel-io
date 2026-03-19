@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { login, register } from "@/lib/storage-client";
+import { apiRequest } from "@/lib/queryClient";
+import { setAuth } from "@/lib/auth";
 
 interface AuthPageProps {
   onAuth: () => void;
@@ -31,8 +32,11 @@ export default function AuthPage({ onAuth, initialMode = "login" }: AuthPageProp
     e.preventDefault();
     setLoading(true);
     try {
-      if (mode === "login") login(email, password);
-      else register(email, password, name);
+      const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/register";
+      const body: any = { email, password };
+      if (mode === "register") body.name = name;
+      const data = await apiRequest("POST", endpoint, body);
+      setAuth(data.token, data.user);
       onAuth();
     } catch (err: any) {
       toast({ title: "Fout", description: err.message, variant: "destructive" });
