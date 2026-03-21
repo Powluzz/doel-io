@@ -62,44 +62,6 @@ app.use((req, res, next) => {
 (async () => {
   await registerRoutes(httpServer, app);
 
-  // Seed demo user
-  const { storage } = await import("./storage");
-  const crypto = await import("crypto");
-  const existing = await storage.getUserByEmail("demo@doel.io");
-  if (!existing) {
-    const demo = await storage.createUser({
-      email: "demo@doel.io",
-      passwordHash: crypto.createHash("sha256").update("demo123doel-io-salt").digest("hex"),
-      name: "Demo Gebruiker",
-    });
-    const goal = await storage.createGoal({
-      userId: demo.id,
-      title: "Minder piekeren over werk",
-      category: "werk",
-      description: null,
-    });
-    await storage.createGEntry({
-      userId: demo.id,
-      goalId: goal.id,
-      event: "Mijn leidinggevende stuurde laat op de avond een mail",
-      thoughts: "Ik moet altijd bereikbaar zijn, anders faal ik",
-      feelings: [{ label: "gespannen", intensity: 75 }, { label: "bedroefd", intensity: 40 }],
-      behaviour: "Ik heb meteen gereageerd, ook al was het al 22:00",
-      consequence: "Even opgelucht, maar sliep daarna slecht",
-      helpfulThought: "Ik mag grenzen stellen en morgen reageren",
-      helpsGoal: "nee",
-      contextTags: ["werk", "avond"],
-      timestamp: new Date(),
-    });
-    await storage.createAction({
-      userId: demo.id,
-      goalId: goal.id,
-      ifSituation: "ik een mail ontvang na 20:00",
-      thenBehaviour: "lees ik hem, maar beantwoord ik hem pas de volgende ochtend",
-      status: "planned",
-    });
-  }
-
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
