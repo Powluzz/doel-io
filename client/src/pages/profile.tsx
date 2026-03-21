@@ -11,6 +11,7 @@ import { Archive, Bell, LogOut, Plus, Target, User } from "lucide-react";
 import * as store from "@/lib/storage-client";
 import { clearAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 const CATEGORIES = [
   { value: "werk", label: "Werk" },
@@ -24,6 +25,7 @@ export default function ProfilePage() {
   const user = store.getMe();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
 
   const [showNewGoal, setShowNewGoal] = useState(false);
   const [newGoalTitle, setNewGoalTitle] = useState("");
@@ -67,7 +69,8 @@ export default function ProfilePage() {
 
   function handleLogout() {
     clearAuth();
-    window.location.reload();
+    queryClient.clear();
+    navigate("~/login");
   }
 
   return (

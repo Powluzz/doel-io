@@ -74,10 +74,12 @@ export default function GSchemaWizard() {
     if (!newGoalTitle.trim()) return;
     try {
       const goal = await store.createGoal(newGoalTitle.trim(), newGoalCategory);
-      queryClient.invalidateQueries({ queryKey: ["goals"] });
+      // Voeg het nieuwe doel direct toe aan de cache zodat het meteen zichtbaar is
+      queryClient.setQueryData(["goals"], (old: any[] = []) => [goal, ...old]);
       setState(s => ({ ...s, goalId: goal.id }));
       setShowNewGoal(false);
       setNewGoalTitle("");
+      setNewGoalCategory("overig");
     } catch (err: any) {
       toast({ title: "Fout", description: err.message, variant: "destructive" });
     }
@@ -142,7 +144,7 @@ export default function GSchemaWizard() {
   }
 
   function back() {
-    if (state.step === 0) { navigate("/app"); return; }
+    if (state.step === 0) { navigate("~/app"); return; }
     setState(s => ({ ...s, step: s.step - 1 }));
   }
 
@@ -325,7 +327,7 @@ export default function GSchemaWizard() {
               <h2 className="text-xl font-bold text-foreground mb-2">Mooi, je hebt aan "{selectedGoal?.title}" gewerkt!</h2>
               <p className="text-muted-foreground text-sm">Elke situatie die je zo onderzoekt, is een oefening richting je doel.</p>
             </div>
-            <Button className="w-full" onClick={() => navigate("/app")}>Klaar</Button>
+            <Button className="w-full" onClick={() => navigate("~/app")}>Klaar</Button>
           </div>
         )}
       </div>
