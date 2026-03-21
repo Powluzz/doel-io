@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import Logo from "@/components/Logo";
 
 export default function LandingPage() {
   return (
@@ -7,7 +8,7 @@ export default function LandingPage() {
       {/* Navbar */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <span className="text-lg font-bold text-foreground">doel.io</span>
+                  <Logo variant="kleur" size="klein" />
           <div className="flex items-center gap-3">
             <Link href="/login">
               <Button variant="ghost" size="sm">
