@@ -21,7 +21,6 @@ interface WizardState {
   goalId: string;
   event: string;
   feelings: Emotion[];
-  bodyNote: string;
   thoughts: string;
   behaviour: string;
   consequence: string;
@@ -62,7 +61,7 @@ export default function GSchemaWizard() {
   const { data: goals = [] } = useQuery({ queryKey: ["goals"], queryFn: () => store.getGoals() });
 
   const [state, setState] = useState<WizardState>({
-    step: 0, goalId: "", event: "", feelings: [], bodyNote: "", thoughts: "",
+    step: 0, goalId: "", event: "", feelings: [], thoughts: "",
     behaviour: "", consequence: "", helpsGoal: "", helpfulThought: "",
     ifSituation: "", thenBehaviour: "",
   });
