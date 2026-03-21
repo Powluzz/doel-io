@@ -4,22 +4,36 @@ import { storage } from "./storage";
 import { z } from "zod";
 import * as crypto from "crypto";
 
-// Simple session store in memory (no cookies/localStorage)
-const sessions: Map<string, string> = new Map(); // token -> userId
+// --- JWT-achtige token via HMAC-SHA256 (geen externe dep) ---
+const JWT_SECRET = process.env.JWT_SECRET ?? "doel-io-dev-secret-change-in-prod";
+
+function signToken(userId: string): string {
+  const payload = Buffer.from(JSON.stringify({ sub: userId, iat: Date.now() })).toString("base64url");
+  const sig = crypto.createHmac("sha256", JWT_SECRET).update(payload).digest("base64url");
+  return `${payload}.${sig}`;
+}
+
+function verifyToken(token: string): string | null {
+  const [payload, sig] = token.split(".");
+  if (!payload || !sig) return null;
+  const expected = crypto.createHmac("sha256", JWT_SECRET).update(payload).digest("base64url");
+  if (sig !== expected) return null;
+  try {
+    const { sub } = JSON.parse(Buffer.from(payload, "base64url").toString());
+    return sub ?? null;
+  } catch {
+    return null;
+  }
+}
 
 function hashPassword(password: string): string {
   return crypto.createHash("sha256").update(password + "doel-io-salt").digest("hex");
 }
 
-function generateToken(): string {
-  return crypto.randomBytes(32).toString("hex");
-}
-
 function getUser(req: any): string | null {
   const auth = req.headers.authorization;
   if (!auth?.startsWith("Bearer ")) return null;
-  const token = auth.slice(7);
-  return sessions.get(token) ?? null;
+  return verifyToken(auth.slice(7));
 }
 
 function requireAuth(req: any, res: any): string | null {
@@ -50,10 +64,7 @@ export async function registerRoutes(httpServer: Server, app: Express) {
       passwordHash: hashPassword(parsed.data.password),
       name: parsed.data.name,
     });
-
-    const token = generateToken();
-    sessions.set(token, user.id);
-
+    const token = signToken(user.id);
     res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
   });
 
@@ -69,18 +80,12 @@ export async function registerRoutes(httpServer: Server, app: Express) {
     if (!user || user.passwordHash !== hashPassword(parsed.data.password)) {
       return res.status(401).json({ error: "Onjuist e-mailadres of wachtwoord" });
     }
-
-    const token = generateToken();
-    sessions.set(token, user.id);
-
+    const token = signToken(user.id);
     res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
   });
 
-  app.post("/api/auth/logout", (req, res) => {
-    const auth = req.headers.authorization;
-    if (auth?.startsWith("Bearer ")) {
-      sessions.delete(auth.slice(7));
-    }
+  app.post("/api/auth/logout", (_req, res) => {
+    // Client verwijdert zelf het token; server hoeft niets te doen bij JWT
     res.json({ ok: true });
   });
 
@@ -110,9 +115,20 @@ export async function registerRoutes(httpServer: Server, app: Express) {
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
-
     const goal = await storage.createGoal({ userId, ...parsed.data });
     res.status(201).json(goal);
+  });
+
+  app.get("/api/goals/all", async (req, res) => {
+    const userId = requireAuth(req, res);
+    if (!userId) return;
+    const goals = await storage.getGoals(userId);
+    // Haal alle goals op inclusief gearchiveerde
+    const [{ db }] = await Promise.all([import("./db")]);
+    const { goals: goalsTable } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    const all = await db.select().from(goalsTable).where(eq(goalsTable.userId, userId));
+    res.json(all);
   });
 
   app.get("/api/goals/:id", async (req, res) => {
@@ -134,12 +150,10 @@ export async function registerRoutes(httpServer: Server, app: Express) {
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
-
     const updateData: any = { ...parsed.data };
     if (parsed.data.archive === true) updateData.archivedAt = new Date();
     if (parsed.data.archive === false) updateData.archivedAt = null;
     delete updateData.archive;
-
     const goal = await storage.updateGoal(req.params.id, userId, updateData);
     if (!goal) return res.status(404).json({ error: "Doel niet gevonden" });
     res.json(goal);
@@ -182,7 +196,6 @@ export async function registerRoutes(httpServer: Server, app: Express) {
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
-
     const entry = await storage.createGEntry({
       userId,
       ...parsed.data,
@@ -236,7 +249,6 @@ export async function registerRoutes(httpServer: Server, app: Express) {
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
-
     const action = await storage.createAction({
       userId,
       ...parsed.data,
@@ -254,7 +266,6 @@ export async function registerRoutes(httpServer: Server, app: Express) {
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
-
     const action = await storage.updateAction(req.params.id, userId, parsed.data);
     if (!action) return res.status(404).json({ error: "Actie niet gevonden" });
     res.json(action);
@@ -295,7 +306,6 @@ export async function registerRoutes(httpServer: Server, app: Express) {
     });
     const parsed = schema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
-
     const pref = await storage.createNotificationPref({ userId, ...parsed.data });
     res.status(201).json(pref);
   });
@@ -308,4 +318,3 @@ export async function registerRoutes(httpServer: Server, app: Express) {
     res.json(pref);
   });
 }
-
