@@ -3,12 +3,25 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import * as crypto from "crypto";
+import rateLimit from "express-rate-limit";
+import { hashPassword, verifyPassword } from "./lib/crypto";
 
-// --- JWT-achtige token via HMAC-SHA256 (geen externe dep) ---
-const JWT_SECRET = process.env.JWT_SECRET ?? "doel-io-dev-secret-change-in-prod";
+// --- JWT_SECRET: verplicht ---
+const JWT_SECRET: string = (() => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET environment variable is required");
+  }
+  return secret;
+})();
 
 function signToken(userId: string): string {
-  const payload = Buffer.from(JSON.stringify({ sub: userId, iat: Date.now() })).toString("base64url");
+  const now = Math.floor(Date.now() / 1000);
+  const payload = Buffer.from(JSON.stringify({
+    sub: userId,
+    iat: now,
+    exp: now + 60 * 60 * 24 * 7, // 7 dagen
+  })).toString("base64url");
   const sig = crypto.createHmac("sha256", JWT_SECRET).update(payload).digest("base64url");
   return `${payload}.${sig}`;
 }
@@ -19,15 +32,15 @@ function verifyToken(token: string): string | null {
   const expected = crypto.createHmac("sha256", JWT_SECRET).update(payload).digest("base64url");
   if (sig !== expected) return null;
   try {
-    const { sub } = JSON.parse(Buffer.from(payload, "base64url").toString());
-    return sub ?? null;
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString());
+    // Controleer of token verlopen is
+    if (data.exp && data.exp < Math.floor(Date.now() / 1000)) {
+      return null;
+    }
+    return data.sub ?? null;
   } catch {
     return null;
   }
-}
-
-function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(password + "doel-io-salt").digest("hex");
 }
 
 function getUser(req: any): string | null {
@@ -39,15 +52,22 @@ function getUser(req: any): string | null {
 function requireAuth(req: any, res: any): string | null {
   const userId = getUser(req);
   if (!userId) {
-    res.status(401).json({ error: "Niet ingelogd" });
+    res.status(401).json({ error: "Sessie verlopen, log opnieuw in" });
     return null;
   }
   return userId;
 }
 
 export async function registerRoutes(httpServer: Server, app: Express) {
+  // --- RATE LIMITING ---
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minuten
+    max: 10,
+    message: { error: "Te veel pogingen, probeer later opnieuw" },
+  });
+
   // --- AUTH ---
-  app.post("/api/auth/register", async (req, res) => {
+  app.post("/api/auth/register", authLimiter, async (req, res) => {
     const schema = z.object({
       email: z.string().email(),
       password: z.string().min(6),
@@ -61,14 +81,14 @@ export async function registerRoutes(httpServer: Server, app: Express) {
 
     const user = await storage.createUser({
       email: parsed.data.email,
-      passwordHash: hashPassword(parsed.data.password),
+      passwordHash: await hashPassword(parsed.data.password),
       name: parsed.data.name,
     });
     const token = signToken(user.id);
     res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", authLimiter, async (req, res) => {
     const schema = z.object({
       email: z.string().email(),
       password: z.string(),
@@ -77,7 +97,15 @@ export async function registerRoutes(httpServer: Server, app: Express) {
     if (!parsed.success) return res.status(400).json({ error: "Ongeldige invoer" });
 
     const user = await storage.getUserByEmail(parsed.data.email);
-    if (!user || user.passwordHash !== hashPassword(parsed.data.password)) {
+    if (!user) {
+      return res.status(401).json({ error: "Onjuist e-mailadres of wachtwoord" });
+    }
+
+    // TODO: Existing accounts have SHA-256 hashed passwords.
+    // Implement migration: on login, if password verifies against old SHA-256 hash,
+    // re-hash with bcrypt and update the stored hash.
+    const passwordValid = await verifyPassword(parsed.data.password, user.passwordHash);
+    if (!passwordValid) {
       return res.status(401).json({ error: "Onjuist e-mailadres of wachtwoord" });
     }
     const token = signToken(user.id);
@@ -215,7 +243,22 @@ export async function registerRoutes(httpServer: Server, app: Express) {
   app.patch("/api/g-entries/:id", async (req, res) => {
     const userId = requireAuth(req, res);
     if (!userId) return;
-    const entry = await storage.updateGEntry(req.params.id, userId, req.body);
+
+    const updateGEntrySchema = z.object({
+      event: z.string().min(1).optional(),
+      thoughts: z.string().min(1).optional(),
+      feelings: z.array(z.object({ label: z.string(), intensity: z.number().min(0).max(100) })).optional(),
+      behaviour: z.string().optional(),
+      consequence: z.string().optional(),
+      helpfulThought: z.string().optional(),
+      helpsGoal: z.enum(["ja", "een_beetje", "nee"]).optional(),
+      contextTags: z.array(z.string()).optional(),
+    });
+
+    const parsed = updateGEntrySchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+
+    const entry = await storage.updateGEntry(req.params.id, userId, parsed.data);
     if (!entry) return res.status(404).json({ error: "Entry niet gevonden" });
     res.json(entry);
   });
