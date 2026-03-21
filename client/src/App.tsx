@@ -1,9 +1,24 @@
 import { Switch, Route, useLocation } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { Toaster } from "@/components/ui/toaster";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Component, type ReactNode } from "react";
 import { isAuthenticated } from "./lib/auth";
 import { Router } from "wouter";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
+  state = { error: null };
+  static getDerivedStateFromError(e: Error) { return { error: e.message }; }
+  render() {
+    if (this.state.error) return (
+      <div style={{ padding: 24, color: "red", fontFamily: "monospace" }}>
+        <b>App fout:</b> {this.state.error}
+      </div>
+    );
+    return this.props.children;
+  }
+}
 import AuthPage from "./pages/auth";
 import LandingPage from "./pages/landing";
 import HomePage from "./pages/home";
@@ -84,9 +99,13 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <Router hook={useHashLocation}>
-      <AppRoutes />
-      <Toaster />
-    </Router>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <Router hook={useHashLocation}>
+          <AppRoutes />
+          <Toaster />
+        </Router>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
