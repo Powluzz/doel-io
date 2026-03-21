@@ -8,7 +8,8 @@ import { getToken, clearAuth } from "./auth";
 function handle401() {
   if (getToken()) {
     clearAuth();
-    window.location.reload();
+    // Navigeer naar login via hash-router
+    window.location.hash = "/login";
   }
 }
 

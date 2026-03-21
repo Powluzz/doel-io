@@ -1,8 +1,8 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { Toaster } from "@/components/ui/toaster";
 import { useState, useEffect } from "react";
-import { getToken, isAuthenticated } from "./lib/auth";
+import { isAuthenticated } from "./lib/auth";
 import { Router } from "wouter";
 import AuthPage from "./pages/auth";
 import LandingPage from "./pages/landing";
@@ -30,66 +30,52 @@ function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Guard-component: redirect naar /login als niet ingelogd, anders toon children */
+function Protected({ children }: { children: React.ReactNode }) {
+  const [, navigate] = useLocation();
+  const authed = isAuthenticated();
+  useEffect(() => {
+    if (!authed) navigate("/login");
+  }, [authed, navigate]);
+  if (!authed) return null;
+  return <>{children}</>;
+}
+
 function AppRoutes() {
-  // Hersync auth-state bij elke render (bijv. na hash-navigatie of tab-focus)
   const [authed, setAuthed] = useState(isAuthenticated);
+  const [, navigate] = useLocation();
 
   useEffect(() => {
-    function syncAuth() {
-      setAuthed(isAuthenticated());
-    }
-    // Hersync wanneer localStorage verandert (bijv. andere tab logt in/uit)
+    function syncAuth() { setAuthed(isAuthenticated()); }
     window.addEventListener("storage", syncAuth);
     return () => window.removeEventListener("storage", syncAuth);
   }, []);
 
+  function handleAuth() {
+    setAuthed(true);
+    navigate("/app");
+  }
+
   return (
     <Switch>
-      {/* Public: marketing landing */}
       <Route path="/" component={LandingPage} />
-      {/* Public: auth */}
       <Route path="/login">
-        {authed ? (
-          <Redirect to="/app" />
-        ) : (
-          <AuthPage onAuth={() => setAuthed(true)} />
-        )}
+        {authed ? null : <AuthPage onAuth={handleAuth} />}
       </Route>
       <Route path="/signup">
-        {authed ? (
-          <Redirect to="/app" />
-        ) : (
-          <AuthPage onAuth={() => setAuthed(true)} initialMode="register" />
-        )}
+        {authed ? null : <AuthPage onAuth={handleAuth} initialMode="register" />}
       </Route>
-      {/* Protected: app shell */}
       <Route path="/app">
-        {authed ? (
-          <AppShell><HomePage /></AppShell>
-        ) : (
-          <Redirect to="/login" />
-        )}
+        <Protected><AppShell><HomePage /></AppShell></Protected>
       </Route>
       <Route path="/g-schema">
-        {authed ? (
-          <AppShell><GSchemaWizard /></AppShell>
-        ) : (
-          <Redirect to="/login" />
-        )}
+        <Protected><AppShell><GSchemaWizard /></AppShell></Protected>
       </Route>
       <Route path="/inzicht">
-        {authed ? (
-          <AppShell><InsightPage /></AppShell>
-        ) : (
-          <Redirect to="/login" />
-        )}
+        <Protected><AppShell><InsightPage /></AppShell></Protected>
       </Route>
       <Route path="/profiel">
-        {authed ? (
-          <AppShell><ProfilePage /></AppShell>
-        ) : (
-          <Redirect to="/login" />
-        )}
+        <Protected><AppShell><ProfilePage /></AppShell></Protected>
       </Route>
       <Route component={NotFound} />
     </Switch>
