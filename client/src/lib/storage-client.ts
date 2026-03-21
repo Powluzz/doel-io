@@ -7,8 +7,26 @@ function genId() {
   return crypto.randomUUID();
 }
 
+// --- LocalStorage persistentie ---
+const STORAGE_KEY = "doelio.currentUser";
+
+function loadCurrentUser(): { id: string; email: string; name: string } | null {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(STORAGE_KEY);
+  return raw ? JSON.parse(raw) : null;
+}
+
+function saveCurrentUser(user: { id: string; email: string; name: string } | null) {
+  if (typeof window === "undefined") return;
+  if (user) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+  } else {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
 // --- State ---
-let currentUser: { id: string; email: string; name: string } | null = null;
+let currentUser: { id: string; email: string; name: string } | null = loadCurrentUser();
 const usersDb: Array<{ id: string; email: string; passwordHash: string; name: string }> = [];
 const goalsDb: Goal[] = [];
 const entriesDb: GEntry[] = [];
@@ -67,6 +85,7 @@ export function register(email: string, password: string, name: string) {
   const user = { id: genId(), email, passwordHash: hashPass(password), name };
   usersDb.push(user);
   currentUser = { id: user.id, email: user.email, name: user.name };
+  saveCurrentUser(currentUser);
   return currentUser;
 }
 
@@ -74,11 +93,18 @@ export function login(email: string, password: string) {
   const user = usersDb.find(u => u.email === email && u.passwordHash === hashPass(password));
   if (!user) throw new Error("Onjuist e-mailadres of wachtwoord");
   currentUser = { id: user.id, email: user.email, name: user.name };
+  saveCurrentUser(currentUser);
   return currentUser;
 }
 
-export function logout() { currentUser = null; }
-export function getMe() { return currentUser; }
+export function logout() {
+  currentUser = null;
+  saveCurrentUser(null);
+}
+
+export function getMe() {
+  return currentUser;
+}
 
 // --- Goals ---
 export function getGoals() {
@@ -92,9 +118,15 @@ export function getAllGoals() {
 }
 
 export function createGoal(title: string, category: string, description?: string): Goal {
+  if (!currentUser) throw new Error("Niet ingelogd");
   const goal: Goal = {
-    id: genId(), userId: currentUser!.id, title, category,
-    description: description ?? null, archivedAt: null, createdAt: new Date(),
+    id: genId(),
+    userId: currentUser.id,
+    title,
+    category,
+    description: description ?? null,
+    archivedAt: null,
+    createdAt: new Date(),
   };
   goalsDb.push(goal);
   return goal;
@@ -118,15 +150,22 @@ export function getEntries(goalId?: string): GEntry[] {
 }
 
 export function createEntry(data: {
-  goalId: string; event: string; thoughts: string;
+  goalId: string;
+  event: string;
+  thoughts: string;
   feelings: Array<{ label: string; intensity: number }>;
-  behaviour?: string; consequence?: string;
-  helpfulThought?: string; helpsGoal?: string;
+  behaviour?: string;
+  consequence?: string;
+  helpfulThought?: string;
+  helpsGoal?: string;
   contextTags?: string[];
 }): GEntry {
+  if (!currentUser) throw new Error("Niet ingelogd");
   const entry: GEntry = {
-    id: genId(), userId: currentUser!.id,
-    timestamp: new Date(), createdAt: new Date(),
+    id: genId(),
+    userId: currentUser.id,
+    timestamp: new Date(),
+    createdAt: new Date(),
     behaviour: data.behaviour ?? null,
     consequence: data.consequence ?? null,
     helpfulThought: data.helpfulThought ?? null,
@@ -156,12 +195,18 @@ export function getActions(goalId?: string, status?: string): Action[] {
 }
 
 export function createAction(data: {
-  goalId: string; gEntryId?: string;
-  ifSituation: string; thenBehaviour: string;
+  goalId: string;
+  gEntryId?: string;
+  ifSituation: string;
+  thenBehaviour: string;
 }): Action {
+  if (!currentUser) throw new Error("Niet ingelogd");
   const action: Action = {
-    id: genId(), userId: currentUser!.id,
-    status: "planned", dueAt: null, createdAt: new Date(),
+    id: genId(),
+    userId: currentUser.id,
+    status: "planned",
+    dueAt: null,
+    createdAt: new Date(),
     gEntryId: data.gEntryId ?? null,
     ...data,
   };
@@ -179,6 +224,7 @@ export function getEmotionInsights(days: number) {
   const from = new Date();
   from.setDate(from.getDate() - days);
   const entries = getEntries().filter(e => e.timestamp >= from);
+
   const byDate: Record<string, Record<string, number[]>> = {};
   for (const entry of entries) {
     const date = entry.timestamp.toISOString().split("T")[0];
@@ -188,10 +234,13 @@ export function getEmotionInsights(days: number) {
       byDate[date][f.label].push(f.intensity);
     }
   }
+
   return Object.entries(byDate).map(([date, emotions]) => ({
     date,
     emotions: Object.fromEntries(
-      Object.entries(emotions).map(([l, vals]) => [l, Math.round((vals as number[]).reduce((a: number, b: number) => a + b, 0) / (vals as number[]).length)])
+      Object.entries(emotions).map(([l, vals]) =>
+        [l, Math.round((vals as number[]).reduce((a: number, b: number) => a + b, 0) / (vals as number[]).length)]
+      )
     ),
   })).sort((a, b) => a.date.localeCompare(b.date));
 }
@@ -211,9 +260,15 @@ export function getNotifPrefs(): NotificationPref[] {
 }
 
 export function createNotifPref(type: string, active: boolean): NotificationPref {
+  if (!currentUser) throw new Error("Niet ingelogd");
   const pref: NotificationPref = {
-    id: genId(), userId: currentUser!.id,
-    channel: "email", type, timeOfDay: "08:00", active, createdAt: new Date(),
+    id: genId(),
+    userId: currentUser.id,
+    channel: "email",
+    type,
+    timeOfDay: "08:00",
+    active,
+    createdAt: new Date(),
   };
   notifsDb.push(pref);
   return pref;
@@ -223,4 +278,3 @@ export function updateNotifPref(id: string, active: boolean) {
   const p = notifsDb.find(p => p.id === id && p.userId === currentUser?.id);
   if (p) p.active = active;
 }
-
