@@ -1,24 +1,10 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Component, type ReactNode, useState, useEffect } from "react";
+import { Switch, Route, useLocation, Router } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
-import { Toaster } from "@/components/ui/toaster";
-import { useState, useEffect, Component, type ReactNode } from "react";
-import { isAuthenticated } from "./lib/auth";
-import { Router } from "wouter";
-import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
-
-class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
-  state = { error: null };
-  static getDerivedStateFromError(e: Error) { return { error: e.message }; }
-  render() {
-    if (this.state.error) return (
-      <div style={{ padding: 24, color: "red", fontFamily: "monospace" }}>
-        <b>App fout:</b> {this.state.error}
-      </div>
-    );
-    return this.props.children;
-  }
-}
+import { queryClient } from "./lib/queryClient";
+import { Toaster } from "@/components/ui/toaster";
+import { isAuthenticated } from "./lib/auth";
 import AuthPage from "./pages/auth";
 import LandingPage from "./pages/landing";
 import HomePage from "./pages/home";
@@ -29,7 +15,27 @@ import NotFound from "./pages/not-found";
 import BottomNav from "./components/BottomNav";
 import Logo from "./components/Logo";
 
-function AppShell({ children }: { children: React.ReactNode }) {
+// Toont eventuele crashes zichtbaar in de UI in plaats van leeg scherm
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: string | null }
+> {
+  state = { error: null };
+  static getDerivedStateFromError(e: Error) {
+    return { error: e.message };
+  }
+  render() {
+    if (this.state.error)
+      return (
+        <div style={{ padding: 24, color: "red", fontFamily: "monospace" }}>
+          <b>Fout:</b> {this.state.error}
+        </div>
+      );
+    return this.props.children;
+  }
+}
+
+function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto relative">
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
@@ -37,61 +43,61 @@ function AppShell({ children }: { children: React.ReactNode }) {
           <Logo variant="kleur" size="full" height={26} />
         </div>
       </header>
-      <main className="flex-1 pb-20">
-        {children}
-      </main>
+      <main className="flex-1 pb-20">{children}</main>
       <BottomNav />
     </div>
   );
-}
-
-/** Guard-component: redirect naar /login als niet ingelogd, anders toon children */
-function Protected({ children }: { children: React.ReactNode }) {
-  const [, navigate] = useLocation();
-  const authed = isAuthenticated();
-  useEffect(() => {
-    if (!authed) navigate("/login");
-  }, [authed, navigate]);
-  if (!authed) return null;
-  return <>{children}</>;
 }
 
 function AppRoutes() {
   const [authed, setAuthed] = useState(isAuthenticated);
   const [, navigate] = useLocation();
 
+  // Sync auth-state als localStorage verandert (bijv. andere tab logt uit)
   useEffect(() => {
-    function syncAuth() { setAuthed(isAuthenticated()); }
-    window.addEventListener("storage", syncAuth);
-    return () => window.removeEventListener("storage", syncAuth);
+    const sync = () => setAuthed(isAuthenticated());
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
   }, []);
 
   function handleAuth() {
     setAuthed(true);
-    navigate("/app");
+    navigate("~/app");
+  }
+
+  function guardedRoute(page: ReactNode) {
+    if (!authed) {
+      navigate("~/login");
+      return null;
+    }
+    return page;
   }
 
   return (
     <Switch>
+      {/* Publieke routes */}
       <Route path="/" component={LandingPage} />
       <Route path="/login">
-        {authed ? null : <AuthPage onAuth={handleAuth} />}
+        <AuthPage onAuth={handleAuth} />
       </Route>
       <Route path="/signup">
-        {authed ? null : <AuthPage onAuth={handleAuth} initialMode="register" />}
+        <AuthPage onAuth={handleAuth} initialMode="register" />
       </Route>
+
+      {/* Beveiligde routes */}
       <Route path="/app">
-        <Protected><AppShell><HomePage /></AppShell></Protected>
+        {guardedRoute(<AppShell><HomePage /></AppShell>)}
       </Route>
       <Route path="/g-schema">
-        <Protected><AppShell><GSchemaWizard /></AppShell></Protected>
+        {guardedRoute(<AppShell><GSchemaWizard /></AppShell>)}
       </Route>
       <Route path="/inzicht">
-        <Protected><AppShell><InsightPage /></AppShell></Protected>
+        {guardedRoute(<AppShell><InsightPage /></AppShell>)}
       </Route>
       <Route path="/profiel">
-        <Protected><AppShell><ProfilePage /></AppShell></Protected>
+        {guardedRoute(<AppShell><ProfilePage /></AppShell>)}
       </Route>
+
       <Route component={NotFound} />
     </Switch>
   );
