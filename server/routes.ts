@@ -3,8 +3,11 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import * as crypto from "crypto";
+import { db } from "./db";
+import { verificationCodes } from "@shared/schema";
+import { eq, and, gt } from "drizzle-orm";
+import { sendVerificationCode } from "./email";
 
-// --- JWT-achtige token via HMAC-SHA256 (geen externe dep) ---
 const JWT_SECRET = process.env.JWT_SECRET ?? "doel-io-dev-secret-change-in-prod";
 
 function signToken(userId: string): string {
@@ -45,6 +48,24 @@ function requireAuth(req: any, res: any): string | null {
   return userId;
 }
 
+function generateCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+async function createAndSendCode(userId: string, email: string): Promise<void> {
+  // Invalidate any existing unused codes
+  await db
+    .update(verificationCodes)
+    .set({ used: true })
+    .where(and(eq(verificationCodes.userId, userId), eq(verificationCodes.used, false)));
+
+  const code = generateCode();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+  await db.insert(verificationCodes).values({ userId, code, expiresAt });
+  await sendVerificationCode(email, code);
+}
+
 export async function registerRoutes(httpServer: Server, app: Express) {
   // --- AUTH ---
   app.post("/api/auth/register", async (req, res) => {
@@ -64,8 +85,9 @@ export async function registerRoutes(httpServer: Server, app: Express) {
       passwordHash: hashPassword(parsed.data.password),
       name: parsed.data.name,
     });
-    const token = signToken(user.id);
-    res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
+
+    await createAndSendCode(user.id, user.email);
+    res.json({ step: "verify", userId: user.id });
   });
 
   app.post("/api/auth/login", async (req, res) => {
@@ -80,12 +102,76 @@ export async function registerRoutes(httpServer: Server, app: Express) {
     if (!user || user.passwordHash !== hashPassword(parsed.data.password)) {
       return res.status(401).json({ error: "Onjuist e-mailadres of wachtwoord" });
     }
+
+    await createAndSendCode(user.id, user.email);
+    res.json({ step: "verify", userId: user.id });
+  });
+
+  app.post("/api/auth/verify", async (req, res) => {
+    const schema = z.object({
+      userId: z.string().uuid(),
+      code: z.string().length(6),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Ongeldige invoer" });
+
+    const { userId, code } = parsed.data;
+
+    // Find valid, unused, non-expired code
+    const [record] = await db
+      .select()
+      .from(verificationCodes)
+      .where(
+        and(
+          eq(verificationCodes.userId, userId),
+          eq(verificationCodes.used, false),
+          gt(verificationCodes.expiresAt, new Date())
+        )
+      )
+      .limit(1);
+
+    if (!record) {
+      return res.status(401).json({ error: "Code ongeldig of verlopen. Probeer opnieuw in te loggen." });
+    }
+
+    // Max 5 attempts
+    if (record.attempts >= 5) {
+      await db.update(verificationCodes).set({ used: true }).where(eq(verificationCodes.id, record.id));
+      return res.status(401).json({ error: "Te veel pogingen. Probeer opnieuw in te loggen." });
+    }
+
+    if (record.code !== code) {
+      await db
+        .update(verificationCodes)
+        .set({ attempts: record.attempts + 1 })
+        .where(eq(verificationCodes.id, record.id));
+      const remaining = 4 - record.attempts;
+      return res.status(401).json({ error: `Onjuiste code. Nog ${remaining} poging${remaining === 1 ? "" : "en"}.` });
+    }
+
+    // Mark as used
+    await db.update(verificationCodes).set({ used: true }).where(eq(verificationCodes.id, record.id));
+
+    const user = await storage.getUserById(userId);
+    if (!user) return res.status(404).json({ error: "Gebruiker niet gevonden" });
+
     const token = signToken(user.id);
     res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
   });
 
+  app.post("/api/auth/resend-code", async (req, res) => {
+    const schema = z.object({ userId: z.string().uuid() });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Ongeldige invoer" });
+
+    const user = await storage.getUserById(parsed.data.userId);
+    if (!user) return res.status(404).json({ error: "Gebruiker niet gevonden" });
+
+    await createAndSendCode(user.id, user.email);
+    res.json({ ok: true });
+  });
+
   app.post("/api/auth/logout", (_req, res) => {
-    // Client verwijdert zelf het token; server hoeft niets te doen bij JWT
     res.json({ ok: true });
   });
 
@@ -123,7 +209,6 @@ export async function registerRoutes(httpServer: Server, app: Express) {
     const userId = requireAuth(req, res);
     if (!userId) return;
     const goals = await storage.getGoals(userId);
-    // Haal alle goals op inclusief gearchiveerde
     const [{ db }] = await Promise.all([import("./db")]);
     const { goals: goalsTable } = await import("@shared/schema");
     const { eq } = await import("drizzle-orm");

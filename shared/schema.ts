@@ -15,12 +15,25 @@ export const insertUserSchema = createInsertSchema(users).omit({ id: true, creat
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
+// Verification Codes (2FA)
+export const verificationCodes = pgTable("verification_codes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  code: text("code").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").notNull().default(false),
+  attempts: integer("attempts").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type VerificationCode = typeof verificationCodes.$inferSelect;
+
 // Goals
 export const goals = pgTable("goals", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull(),
   title: text("title").notNull(),
-  category: text("category").notNull().default("overig"), // werk, relaties, gezondheid, zelfbeeld, overig
+  category: text("category").notNull().default("overig"),
   description: text("description"),
   archivedAt: timestamp("archived_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -42,7 +55,7 @@ export const gEntries = pgTable("g_entries", {
   behaviour: text("behaviour"),
   consequence: text("consequence"),
   helpfulThought: text("helpful_thought"),
-  helpsGoal: text("helps_goal"), // "ja", "een_beetje", "nee"
+  helpsGoal: text("helps_goal"),
   contextTags: jsonb("context_tags").$type<string[]>().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -59,7 +72,7 @@ export const actions = pgTable("actions", {
   gEntryId: uuid("g_entry_id"),
   ifSituation: text("if_situation").notNull(),
   thenBehaviour: text("then_behaviour").notNull(),
-  status: text("status").notNull().default("planned"), // planned, done, skipped
+  status: text("status").notNull().default("planned"),
   dueAt: timestamp("due_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -72,8 +85,8 @@ export type Action = typeof actions.$inferSelect;
 export const notificationPreferences = pgTable("notification_preferences", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull(),
-  channel: text("channel").notNull().default("email"), // email, push
-  type: text("type").notNull(), // daily_checkin, action_reminder
+  channel: text("channel").notNull().default("email"),
+  type: text("type").notNull(),
   timeOfDay: text("time_of_day").notNull().default("08:00"),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
