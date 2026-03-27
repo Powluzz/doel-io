@@ -68,9 +68,6 @@ export default function AuthPage({ onAuth, initialMode = "login" }: AuthPageProp
         <div className="flex flex-col md:flex-row gap-12 items-center">
           {/* Links: formulier */}
           <div className="flex-1 space-y-6">
-            <h1 className="text-3xl md:text-4xl font-bold leading-tight text-foreground">
-              {mode === "login" ? "Welkom terug" : "Begin vandaag"}
-            </h1>
             <p className="text-lg text-muted-foreground">
               {mode === "login"
                 ? "Log in en ga verder aan je doelen."
