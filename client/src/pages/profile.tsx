@@ -39,11 +39,16 @@ export default function ProfilePage() {
   const dailyCheckin = notifPrefs.find((p: any) => p.type === "daily_checkin");
   const actionReminder = notifPrefs.find((p: any) => p.type === "action_reminder");
 
+  function invalidateGoals() {
+    queryClient.invalidateQueries({ queryKey: ["goals"] });
+    queryClient.invalidateQueries({ queryKey: ["goals", "all"] });
+  }
+
   async function handleCreateGoal() {
     if (!newGoalTitle.trim()) return;
     try {
       await store.createGoal(newGoalTitle.trim(), newGoalCategory);
-      queryClient.invalidateQueries({ queryKey: ["goals"] });
+      invalidateGoals();
       setShowNewGoal(false);
       setNewGoalTitle("");
       toast({ title: "Doel aangemaakt!" });
@@ -54,7 +59,7 @@ export default function ProfilePage() {
 
   async function handleArchiveGoal(id: string, archive: boolean) {
     await store.archiveGoal(id, archive);
-    queryClient.invalidateQueries({ queryKey: ["goals"] });
+    invalidateGoals();
   }
 
   async function handleNotifToggle(type: string, active: boolean) {
