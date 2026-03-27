@@ -14,7 +14,7 @@ import InsightPage from "./pages/insight";
 import ProfilePage from "./pages/profile";
 import NotFound from "./pages/not-found";
 import BottomNav from "./components/BottomNav";
-import Logo from "./components/Logo";
+import LogoMenu from "./components/LogoMenu";
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -40,7 +40,7 @@ function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto relative">
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
         <div className="px-4 py-3 flex items-center">
-          <Logo variant="kleur" size="full" height={26} />
+          <LogoMenu />
         </div>
       </header>
       <main className="flex-1 pb-20">{children}</main>
