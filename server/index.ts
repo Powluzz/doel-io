@@ -4,8 +4,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { Pool } from "pg";
 import { readFileSync, readdirSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import { join } from "path";
 
 const app = express();
 const httpServer = createServer(app);
@@ -82,8 +81,8 @@ async function runMigrations() {
       )
     `);
 
-    const __dirname = dirname(fileURLToPath(import.meta.url));
-    const migrationsDir = join(__dirname, "../migrations");
+    // process.cwd() werkt zowel in ESM als gebundeld CJS
+    const migrationsDir = join(process.cwd(), "migrations");
     const files = readdirSync(migrationsDir)
       .filter(f => f.endsWith(".sql"))
       .sort();
