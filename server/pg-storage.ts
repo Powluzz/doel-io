@@ -27,6 +27,10 @@ export class PgStorage implements IStorage {
     return user;
   }
 
+  async updateUserPassword(id: string, passwordHash: string): Promise<void> {
+    await db.update(users).set({ passwordHash }).where(eq(users.id, id));
+  }
+
   // --- Goals ---
   async getGoals(userId: string): Promise<Goal[]> {
     return db.select().from(goals)

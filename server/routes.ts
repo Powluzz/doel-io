@@ -6,7 +6,7 @@ import * as crypto from "crypto";
 import { db } from "./db";
 import { verificationCodes } from "@shared/schema";
 import { eq, and, gt } from "drizzle-orm";
-import { sendVerificationCode } from "./email";
+import { sendVerificationCode, sendPasswordResetCode } from "./email";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "doel-io-dev-secret-change-in-prod";
 
@@ -168,6 +168,77 @@ export async function registerRoutes(httpServer: Server, app: Express) {
     if (!user) return res.status(404).json({ error: "Gebruiker niet gevonden" });
 
     await createAndSendCode(user.id, user.email);
+    res.json({ ok: true });
+  });
+
+  // Stap 1: vraag reset-code aan op basis van e-mailadres
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    const schema = z.object({ email: z.string().email() });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Ongeldig e-mailadres" });
+
+    const user = await storage.getUserByEmail(parsed.data.email);
+    // Altijd 200 teruggeven om e-mail-enumeration te voorkomen
+    if (!user) return res.json({ ok: true });
+
+    await db
+      .update(verificationCodes)
+      .set({ used: true })
+      .where(and(eq(verificationCodes.userId, user.id), eq(verificationCodes.used, false)));
+
+    const code = generateCode();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    await db.insert(verificationCodes).values({ userId: user.id, code, expiresAt });
+    await sendPasswordResetCode(user.email, code);
+
+    res.json({ ok: true, userId: user.id });
+  });
+
+  // Stap 2: verifieer code + stel nieuw wachtwoord in
+  app.post("/api/auth/reset-password", async (req, res) => {
+    const schema = z.object({
+      userId: z.string().uuid(),
+      code: z.string().length(6),
+      newPassword: z.string().min(6),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+
+    const { userId, code, newPassword } = parsed.data;
+
+    const [record] = await db
+      .select()
+      .from(verificationCodes)
+      .where(
+        and(
+          eq(verificationCodes.userId, userId),
+          eq(verificationCodes.used, false),
+          gt(verificationCodes.expiresAt, new Date())
+        )
+      )
+      .limit(1);
+
+    if (!record) {
+      return res.status(401).json({ error: "Code ongeldig of verlopen." });
+    }
+
+    if (record.attempts >= 5) {
+      await db.update(verificationCodes).set({ used: true }).where(eq(verificationCodes.id, record.id));
+      return res.status(401).json({ error: "Te veel pogingen. Vraag een nieuwe code aan." });
+    }
+
+    if (record.code !== code) {
+      await db
+        .update(verificationCodes)
+        .set({ attempts: record.attempts + 1 })
+        .where(eq(verificationCodes.id, record.id));
+      const remaining = 4 - record.attempts;
+      return res.status(401).json({ error: `Onjuiste code. Nog ${remaining} poging${remaining === 1 ? "" : "en"}.` });
+    }
+
+    await db.update(verificationCodes).set({ used: true }).where(eq(verificationCodes.id, record.id));
+    await storage.updateUserPassword(userId, hashPassword(newPassword));
+
     res.json({ ok: true });
   });
 

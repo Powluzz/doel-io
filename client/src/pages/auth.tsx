@@ -19,7 +19,7 @@ interface AuthPageProps {
   initialMode?: "login" | "register";
 }
 
-type Step = "credentials" | "verify";
+type Step = "credentials" | "verify" | "forgot" | "reset";
 
 export default function AuthPage({ onAuth, initialMode = "login" }: AuthPageProps) {
   const [mode, setMode] = useState<"login" | "register">(initialMode);
@@ -30,8 +30,11 @@ export default function AuthPage({ onAuth, initialMode = "login" }: AuthPageProp
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
   const { toast } = useToast();
 
   async function handleCredentials(e: React.FormEvent) {
@@ -78,12 +81,55 @@ export default function AuthPage({ onAuth, initialMode = "login" }: AuthPageProp
     }
   }
 
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const data = await apiRequest("POST", "/api/auth/forgot-password", { email });
+      setUserEmail(email);
+      if (data.userId) setUserId(data.userId);
+      setStep("reset");
+      setCode("");
+    } catch (err: any) {
+      toast({ title: "Fout", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleResetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (newPassword !== newPasswordConfirm) {
+      toast({ title: "Wachtwoorden komen niet overeen", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    try {
+      await apiRequest("POST", "/api/auth/reset-password", { userId, code, newPassword });
+      setResetDone(true);
+    } catch (err: any) {
+      toast({ title: "Fout", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function backToLogin() {
+    setStep("credentials");
+    setMode("login");
+    setCode("");
+    setNewPassword("");
+    setNewPasswordConfirm("");
+    setResetDone(false);
+  }
+
   return (
     <div className="text-foreground">
       <section className="max-w-5xl mx-auto px-6 py-16 md:py-24">
         <div className="flex flex-col md:flex-row gap-12 items-center">
           <div className="flex-1 space-y-6">
 
+            {/* === LOGIN / REGISTER === */}
             {step === "credentials" && (
               <>
                 <p className="text-lg text-muted-foreground">
@@ -101,7 +147,18 @@ export default function AuthPage({ onAuth, initialMode = "login" }: AuthPageProp
                     <Input id="email" type="email" placeholder="jij@voorbeeld.nl" value={email} onChange={e => setEmail(e.target.value)} required />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="password">Wachtwoord</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Wachtwoord</Label>
+                      {mode === "login" && (
+                        <button
+                          type="button"
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          onClick={() => { setStep("forgot"); setCode(""); }}
+                        >
+                          Wachtwoord vergeten?
+                        </button>
+                      )}
+                    </div>
                     <Input id="password" type="password" placeholder={mode === "register" ? "Minimaal 6 tekens" : "Je wachtwoord"} value={password} onChange={e => setPassword(e.target.value)} required minLength={mode === "register" ? 6 : 1} />
                   </div>
                   <Button type="submit" size="lg" className="w-full" disabled={loading}>
@@ -114,6 +171,7 @@ export default function AuthPage({ onAuth, initialMode = "login" }: AuthPageProp
               </>
             )}
 
+            {/* === VERIFICATIE (login/register) === */}
             {step === "verify" && (
               <>
                 <div>
@@ -156,6 +214,110 @@ export default function AuthPage({ onAuth, initialMode = "login" }: AuthPageProp
                 <button type="button" className="text-sm text-muted-foreground hover:text-foreground" onClick={() => { setStep("credentials"); setCode(""); }}>
                   ← Terug
                 </button>
+              </>
+            )}
+
+            {/* === WACHTWOORD VERGETEN: e-mail invoeren === */}
+            {step === "forgot" && (
+              <>
+                <div>
+                  <h2 className="text-xl font-semibold text-foreground mb-1">Wachtwoord vergeten?</h2>
+                  <p className="text-muted-foreground text-sm">
+                    Vul je e-mailadres in. Als er een account bestaat, sturen we een resetcode.
+                  </p>
+                </div>
+                <form onSubmit={handleForgotPassword} className="space-y-4 max-w-sm">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="forgot-email">E-mailadres</Label>
+                    <Input
+                      id="forgot-email"
+                      type="email"
+                      placeholder="jij@voorbeeld.nl"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" size="lg" className="w-full" disabled={loading}>
+                    {loading ? "Versturen..." : "Resetcode versturen"}
+                  </Button>
+                </form>
+                <button type="button" className="text-sm text-muted-foreground hover:text-foreground" onClick={backToLogin}>
+                  ← Terug naar inloggen
+                </button>
+              </>
+            )}
+
+            {/* === WACHTWOORD RESET: code + nieuw wachtwoord === */}
+            {step === "reset" && !resetDone && (
+              <>
+                <div>
+                  <h2 className="text-xl font-semibold text-foreground mb-1">Nieuw wachtwoord instellen</h2>
+                  <p className="text-muted-foreground text-sm">
+                    We hebben een resetcode gestuurd naar <strong>{userEmail}</strong>. Voer de code in en kies een nieuw wachtwoord.
+                  </p>
+                </div>
+                <form onSubmit={handleResetPassword} className="space-y-4 max-w-sm">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="reset-code">Resetcode</Label>
+                    <Input
+                      id="reset-code"
+                      placeholder="123456"
+                      value={code}
+                      onChange={e => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      maxLength={6}
+                      inputMode="numeric"
+                      pattern="[0-9]{6}"
+                      required
+                      className="text-2xl tracking-widest text-center"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="new-password">Nieuw wachtwoord</Label>
+                    <Input
+                      id="new-password"
+                      type="password"
+                      placeholder="Minimaal 6 tekens"
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="confirm-password">Bevestig wachtwoord</Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      placeholder="Herhaal nieuw wachtwoord"
+                      value={newPasswordConfirm}
+                      onChange={e => setNewPasswordConfirm(e.target.value)}
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                  <Button type="submit" size="lg" className="w-full" disabled={loading || code.length < 6}>
+                    {loading ? "Opslaan..." : "Wachtwoord opslaan"}
+                  </Button>
+                </form>
+                <button type="button" className="text-sm text-muted-foreground hover:text-foreground" onClick={() => setStep("forgot")}>
+                  ← Andere e-mail proberen
+                </button>
+              </>
+            )}
+
+            {/* === RESET GESLAAGD === */}
+            {step === "reset" && resetDone && (
+              <>
+                <div className="space-y-2">
+                  <h2 className="text-xl font-semibold text-foreground">Wachtwoord gewijzigd ✓</h2>
+                  <p className="text-muted-foreground text-sm">
+                    Je wachtwoord is succesvol bijgewerkt. Je kunt nu inloggen met je nieuwe wachtwoord.
+                  </p>
+                </div>
+                <Button size="lg" className="max-w-sm w-full" onClick={backToLogin}>
+                  Naar inloggen
+                </Button>
               </>
             )}
 
