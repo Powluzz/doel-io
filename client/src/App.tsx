@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { isAuthenticated } from "./lib/auth";
 import AuthPage from "./pages/auth";
 import LandingPage from "./pages/landing";
+import OverPage from "./pages/over";
 import HomePage from "./pages/home";
 import GSchemaWizard from "./pages/g-schema-wizard";
 import InsightPage from "./pages/insight";
@@ -15,7 +16,6 @@ import NotFound from "./pages/not-found";
 import BottomNav from "./components/BottomNav";
 import Logo from "./components/Logo";
 
-// Toont eventuele crashes zichtbaar in de UI in plaats van leeg scherm
 class ErrorBoundary extends Component<
   { children: ReactNode },
   { error: string | null }
@@ -49,7 +49,6 @@ function AppShell({ children }: { children: ReactNode }) {
   );
 }
 
-// Veilige redirect: navigeert via useEffect, niet tijdens render
 function RedirectToLogin() {
   const [, navigate] = useLocation();
   useEffect(() => {
@@ -62,7 +61,6 @@ function AppRoutes() {
   const [authed, setAuthed] = useState(isAuthenticated);
   const [, navigate] = useLocation();
 
-  // Sync auth-state als localStorage verandert (bijv. andere tab logt uit)
   useEffect(() => {
     const sync = () => setAuthed(isAuthenticated());
     window.addEventListener("storage", sync);
@@ -83,6 +81,7 @@ function AppRoutes() {
     <Switch>
       {/* Publieke routes */}
       <Route path="/" component={LandingPage} />
+      <Route path="/over" component={OverPage} />
       <Route path="/login">
         <AuthPage onAuth={handleAuth} />
       </Route>

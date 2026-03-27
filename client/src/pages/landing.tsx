@@ -8,8 +8,13 @@ export default function LandingPage() {
       {/* Navbar */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-                  <Logo variant="kleur" size="klein" />
+          <Logo variant="kleur" size="klein" />
           <div className="flex items-center gap-3">
+            <Link href="/over">
+              <Button variant="ghost" size="sm">
+                Over doel.io
+              </Button>
+            </Link>
             <Link href="/login">
               <Button variant="ghost" size="sm">
                 Inloggen
@@ -196,4 +201,3 @@ export default function LandingPage() {
     </div>
   );
 }
-
