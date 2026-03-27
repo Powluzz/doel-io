@@ -49,6 +49,15 @@ function AppShell({ children }: { children: ReactNode }) {
   );
 }
 
+// Veilige redirect: navigeert via useEffect, niet tijdens render
+function RedirectToLogin() {
+  const [, navigate] = useLocation();
+  useEffect(() => {
+    navigate("~/login");
+  }, []);
+  return null;
+}
+
 function AppRoutes() {
   const [authed, setAuthed] = useState(isAuthenticated);
   const [, navigate] = useLocation();
@@ -66,10 +75,7 @@ function AppRoutes() {
   }
 
   function guardedRoute(page: ReactNode) {
-    if (!authed) {
-      navigate("~/login");
-      return null;
-    }
+    if (!authed) return <RedirectToLogin />;
     return page;
   }
 
