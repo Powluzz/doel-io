@@ -6,14 +6,12 @@ function getResend(): Resend {
   return new Resend(key);
 }
 
-const FROM =
-  process.env.NODE_ENV === "production"
-    ? "doel.io <noreply@doel.io>"
-    : "doel.io <onboarding@resend.dev>";
+// Switch to "doel.io <noreply@doel.io>" once Resend domain is verified
+const FROM = process.env.RESEND_FROM ?? "doel.io <onboarding@resend.dev>";
 
 export async function sendVerificationCode(email: string, code: string): Promise<void> {
   const resend = getResend();
-  await resend.emails.send({
+  const result = await resend.emails.send({
     from: FROM,
     to: email,
     subject: `${code} is jouw doel.io inlogcode`,
@@ -29,4 +27,7 @@ export async function sendVerificationCode(email: string, code: string): Promise
       </div>
     `,
   });
+  if (result.error) {
+    throw new Error(`Resend fout: ${result.error.message}`);
+  }
 }
