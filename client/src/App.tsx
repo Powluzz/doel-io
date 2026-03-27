@@ -14,7 +14,7 @@ import InsightPage from "./pages/insight";
 import ProfilePage from "./pages/profile";
 import NotFound from "./pages/not-found";
 import BottomNav from "./components/BottomNav";
-import LogoMenu from "./components/LogoMenu";
+import AppHeader from "./components/AppHeader";
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -35,25 +35,19 @@ class ErrorBoundary extends Component<
   }
 }
 
-function AppShell({ children }: { children: ReactNode }) {
+function Layout({ children, bottomNav = false }: { children: ReactNode; bottomNav?: boolean }) {
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto relative">
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
-        <div className="px-4 py-3 flex items-center">
-          <LogoMenu />
-        </div>
-      </header>
-      <main className="flex-1 pb-20">{children}</main>
-      <BottomNav />
+    <div className="min-h-screen bg-background flex flex-col max-w-5xl mx-auto relative">
+      <AppHeader />
+      <main className={bottomNav ? "flex-1 pb-20" : "flex-1"}>{children}</main>
+      {bottomNav && <BottomNav />}
     </div>
   );
 }
 
 function RedirectToLogin() {
   const [, navigate] = useLocation();
-  useEffect(() => {
-    navigate("~/login");
-  }, []);
+  useEffect(() => { navigate("~/login"); }, []);
   return null;
 }
 
@@ -72,37 +66,37 @@ function AppRoutes() {
     navigate("~/app");
   }
 
-  function guardedRoute(page: ReactNode) {
+  function guarded(page: ReactNode) {
     if (!authed) return <RedirectToLogin />;
     return page;
   }
 
   return (
     <Switch>
-      {/* Publieke routes */}
-      <Route path="/" component={LandingPage} />
-      <Route path="/over" component={OverPage} />
+      <Route path="/">
+        <Layout><LandingPage /></Layout>
+      </Route>
+      <Route path="/over">
+        <Layout><OverPage /></Layout>
+      </Route>
       <Route path="/login">
-        <AuthPage onAuth={handleAuth} />
+        <Layout><AuthPage onAuth={handleAuth} /></Layout>
       </Route>
       <Route path="/signup">
-        <AuthPage onAuth={handleAuth} initialMode="register" />
+        <Layout><AuthPage onAuth={handleAuth} initialMode="register" /></Layout>
       </Route>
-
-      {/* Beveiligde routes */}
       <Route path="/app">
-        {guardedRoute(<AppShell><HomePage /></AppShell>)}
+        {guarded(<Layout bottomNav><HomePage /></Layout>)}
       </Route>
       <Route path="/g-schema">
-        {guardedRoute(<AppShell><GSchemaWizard /></AppShell>)}
+        {guarded(<Layout bottomNav><GSchemaWizard /></Layout>)}
       </Route>
       <Route path="/inzicht">
-        {guardedRoute(<AppShell><InsightPage /></AppShell>)}
+        {guarded(<Layout bottomNav><InsightPage /></Layout>)}
       </Route>
       <Route path="/profiel">
-        {guardedRoute(<AppShell><ProfilePage /></AppShell>)}
+        {guarded(<Layout bottomNav><ProfilePage /></Layout>)}
       </Route>
-
       <Route component={NotFound} />
     </Switch>
   );

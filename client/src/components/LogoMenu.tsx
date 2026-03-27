@@ -10,6 +10,9 @@ export default function LogoMenu() {
   const [, navigate] = useHashLocation();
   const { theme, setTheme } = useTheme();
 
+  const isDark = theme === "dark" ||
+    (theme === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -25,8 +28,6 @@ export default function LogoMenu() {
     setOpen(false);
   }
 
-  const isDark = theme === "dark";
-
   return (
     <div ref={ref} className="relative">
       <button
@@ -34,11 +35,11 @@ export default function LogoMenu() {
         className="flex items-center focus:outline-none"
         aria-label="Open menu"
       >
-        <Logo variant="kleur" size="full" height={26} />
+        <Logo variant={isDark ? "wit" : "zwart"} size="full" height={26} />
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-2 w-48 rounded-lg border border-border bg-popover shadow-lg z-50 py-1 text-popover-foreground">
+        <div className="absolute left-0 top-full mt-2 w-52 rounded-lg border border-border bg-popover shadow-lg z-50 py-1 text-popover-foreground">
           <MenuItem icon={<Home size={15} />} label="Home" onClick={() => go("/")} />
           <MenuItem icon={<LogIn size={15} />} label="Inloggen" onClick={() => go("/login")} />
           <MenuItem icon={<UserPlus size={15} />} label="Aanmelden" onClick={() => go("/signup")} />
