@@ -53,6 +53,7 @@ function RedirectToLogin() {
 
 function AppRoutes() {
   const [authed, setAuthed] = useState(isAuthenticated);
+  const [pendingNav, setPendingNav] = useState<string | null>(null);
   const [, navigate] = useLocation();
 
   useEffect(() => {
@@ -61,9 +62,17 @@ function AppRoutes() {
     return () => window.removeEventListener("storage", sync);
   }, []);
 
+  // Navigate only after authed state is committed
+  useEffect(() => {
+    if (pendingNav && authed) {
+      navigate(pendingNav);
+      setPendingNav(null);
+    }
+  }, [authed, pendingNav]);
+
   function handleAuth() {
     setAuthed(true);
-    navigate("~/app");
+    setPendingNav("~/app");
   }
 
   function guarded(page: ReactNode) {
