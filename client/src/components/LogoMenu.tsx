@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useHashLocation } from "wouter/use-hash-location";
 import { Home, LogIn, UserPlus, Info, Sun, Moon } from "lucide-react";
 import Logo from "./Logo";
 import { useTheme } from "@/hooks/use-theme";
@@ -7,10 +7,9 @@ import { useTheme } from "@/hooks/use-theme";
 export default function LogoMenu() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const [, navigate] = useLocation();
+  const [, navigate] = useHashLocation();
   const { theme, setTheme } = useTheme();
 
-  // Close on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -22,7 +21,7 @@ export default function LogoMenu() {
   }, []);
 
   function go(path: string) {
-    navigate("~" + path);
+    navigate(path);
     setOpen(false);
   }
 
@@ -46,7 +45,7 @@ export default function LogoMenu() {
           <MenuItem icon={<Info size={15} />} label="Over ons" onClick={() => go("/over")} />
           <div className="my-1 border-t border-border" />
           <button
-            onClick={() => setTheme(isDark ? "light" : "dark")}
+            onClick={() => { setTheme(isDark ? "light" : "dark"); setOpen(false); }}
             className="w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
           >
             {isDark ? <Sun size={15} /> : <Moon size={15} />}
