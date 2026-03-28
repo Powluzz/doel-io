@@ -9,7 +9,7 @@ export default function LandingPage() {
         <div className="flex flex-col md:flex-row gap-12 items-center">
           <div className="flex-1 space-y-6">
             <h1 className="text-3xl md:text-4xl font-bold leading-tight text-foreground">
-              Breng je gedragspatronen in kaart met één eenvoudig G-schema
+              Doorbreek negatieve patronen en haal je doelen
             </h1>
             <p className="text-lg text-muted-foreground">
               doel.io helpt je om gedachten, gevoelens en gedrag helder te krijgen, zodat je gerichter
@@ -17,9 +17,9 @@ export default function LandingPage() {
             </p>
             <ul className="space-y-2">
               {[
-                "Ontdek patronen achter stress, twijfel en uitstelgedrag.",
-                "Zie hoe jouw gedachten je gevoel en gedrag sturen.",
-                "Vertaal inzichten direct naar kleine, haalbare acties.",
+                "Ontdek patronen achter stress, twijfel en uitstelgedrag",
+                "Zie hoe jouw gedachten je gevoel en gedrag sturen",
+                "Vertaal inzichten direct naar kleine, haalbare acties",
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2 text-foreground">
                   <span className="mt-1 w-4 h-4 rounded-full bg-primary/20 flex-shrink-0 flex items-center justify-center">
@@ -31,7 +31,7 @@ export default function LandingPage() {
             </ul>
             <div className="space-y-2">
               <Link href="/signup">
-                <Button size="lg" className="w-full sm:w-auto">Start met je eerste G-schema</Button>
+                <Button size="lg" className="w-full sm:w-auto">Start met je eerste doel</Button>
               </Link>
               <p className="text-xs text-muted-foreground">Binnen een paar minuten ingevuld. Jij bepaalt wat je deelt.</p>
             </div>
@@ -95,7 +95,7 @@ export default function LandingPage() {
           ))}
         </div>
         <div className="text-center pt-4">
-          <Link href="/signup"><Button size="lg">Start met je eerste G-schema</Button></Link>
+          <Link href="/signup"><Button size="lg">Start met je eerste doel</Button></Link>
         </div>
       </section>
 
@@ -105,7 +105,7 @@ export default function LandingPage() {
           <h2 className="text-2xl md:text-3xl font-bold">Klaar om je patronen scherper te zien?</h2>
           <p className="text-primary-foreground/80">Binnen een paar minuten heb je je eerste G-schema ingevuld.</p>
           <Link href="/signup">
-            <Button size="lg" variant="secondary" className="font-semibold">Start met je eerste G-schema</Button>
+            <Button size="lg" variant="secondary" className="font-semibold">Start met je eerste doel</Button>
           </Link>
         </div>
       </section>
