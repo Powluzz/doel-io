@@ -1,24 +1,56 @@
 const TOKEN_KEY = "doelio.token";
 const USER_KEY = "doelio.user";
 
-let authToken: string | null = localStorage.getItem(TOKEN_KEY);
+// localStorage is blocked in sandboxed iframes — wrap every access
+function lsGet(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function lsSet(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // silently ignore — in-memory fallback is still set below
+  }
+}
+
+function lsRemove(key: string): void {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // silently ignore
+  }
+}
+
+let authToken: string | null = lsGet(TOKEN_KEY);
 let currentUser: { id: string; email: string; name: string } | null = (() => {
-  const raw = localStorage.getItem(USER_KEY);
-  return raw ? JSON.parse(raw) : null;
+  const raw = lsGet(USER_KEY);
+  try {
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
 })();
 
 export function setAuth(token: string, user: { id: string; email: string; name: string }) {
   authToken = token;
   currentUser = user;
-  localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  lsSet(TOKEN_KEY, token);
+  lsSet(USER_KEY, JSON.stringify(user));
+  // Trigger storage event for cross-tab sync (same-tab listeners won't fire automatically)
+  window.dispatchEvent(new Event("storage"));
 }
 
 export function clearAuth() {
   authToken = null;
   currentUser = null;
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
+  lsRemove(TOKEN_KEY);
+  lsRemove(USER_KEY);
+  window.dispatchEvent(new Event("storage"));
 }
 
 export function getToken(): string | null {
