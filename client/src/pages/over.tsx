@@ -54,10 +54,17 @@ export default function OverPage() {
       </section>
 
       <section className="border-t border-border py-10">
-        <div className="max-w-3xl mx-auto px-6">
+        <div className="max-w-3xl mx-auto px-6 space-y-3">
           <p className="text-xs text-muted-foreground leading-relaxed">
             <strong>Let op:</strong> doel.io is een hulpmiddel en geen vervanging voor professionele
             psychologische of therapeutische zorg.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Lees onze{" "}
+            <Link href="/privacy" className="underline hover:text-foreground transition-colors">
+              privacyverklaring
+            </Link>
+            .
           </p>
         </div>
       </section>
