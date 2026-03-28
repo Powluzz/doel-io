@@ -89,10 +89,14 @@ function AppRoutes() {
         <Layout><OverPage /></Layout>
       </Route>
       <Route path="/login">
-        <Layout><AuthPage onAuth={handleAuth} /></Layout>
+        <Layout>
+          <AuthPage key="login" onAuth={handleAuth} initialMode="login" />
+        </Layout>
       </Route>
       <Route path="/signup">
-        <Layout><AuthPage onAuth={handleAuth} initialMode="register" /></Layout>
+        <Layout>
+          <AuthPage key="signup" onAuth={handleAuth} initialMode="register" />
+        </Layout>
       </Route>
       <Route path="/app">
         {guarded(<Layout bottomNav><HomePage /></Layout>)}
