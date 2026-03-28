@@ -64,6 +64,10 @@ export default function OverPage() {
             <Link href="/privacy" className="underline hover:text-foreground transition-colors">
               privacyverklaring
             </Link>
+            {" "}en{" "}
+            <Link href="/voorwaarden" className="underline hover:text-foreground transition-colors">
+              algemene voorwaarden
+            </Link>
             .
           </p>
         </div>

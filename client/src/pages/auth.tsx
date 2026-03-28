@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -164,6 +165,19 @@ export default function AuthPage({ onAuth, initialMode = "login" }: AuthPageProp
                   <Button type="submit" size="lg" className="w-full" disabled={loading}>
                     {loading ? "Even geduld..." : mode === "login" ? "Inloggen" : "Account aanmaken"}
                   </Button>
+                  {mode === "register" && (
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Door een account aan te maken ga je akkoord met onze{" "}
+                      <Link href="/voorwaarden" className="underline hover:text-foreground transition-colors">
+                        algemene voorwaarden
+                      </Link>
+                      {" "}en{" "}
+                      <Link href="/privacy" className="underline hover:text-foreground transition-colors">
+                        privacyverklaring
+                      </Link>
+                      .
+                    </p>
+                  )}
                 </form>
                 <button type="button" className="text-sm text-muted-foreground hover:text-foreground transition-colors" onClick={() => setMode(mode === "login" ? "register" : "login")}>
                   {mode === "login" ? "Nog geen account? Aanmelden" : "Al een account? Inloggen"}

@@ -9,6 +9,7 @@ import AuthPage from "./pages/auth";
 import LandingPage from "./pages/landing";
 import OverPage from "./pages/over";
 import PrivacyPage from "./pages/privacy";
+import VoorwaardenPage from "./pages/voorwaarden";
 import HomePage from "./pages/home";
 import GSchemaWizard from "./pages/g-schema-wizard";
 import InsightPage from "./pages/insight";
@@ -91,6 +92,9 @@ function AppRoutes() {
       </Route>
       <Route path="/privacy">
         <Layout><PrivacyPage /></Layout>
+      </Route>
+      <Route path="/voorwaarden">
+        <Layout><VoorwaardenPage /></Layout>
       </Route>
       <Route path="/login">
         <Layout>
